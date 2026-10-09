@@ -1,0 +1,79 @@
+<?xml version="1.0" ?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Parámetros del motor -->
+  <xacro:property name="max_rot_velocity" value="800.0" />
+  <xacro:property name="motor_constant" value="8.54858e-06" />
+  <xacro:property name="moment_constant" value="0.016" />
+  <xacro:property name="time_constant_up" value="0.0125" />
+  <xacro:property name="time_constant_down" value="0.025" />
+  <xacro:property name="rotor_drag_coefficient" value="8.06428e-05" />
+  <xacro:property name="rolling_moment_coefficient" value="1e-06" />
+
+  <!-- Tags para que Gazebo use las inercias del URDF -->
+  <gazebo reference="base_link"/>
+  <gazebo reference="rotor_0"/>
+  <gazebo reference="rotor_1"/>
+  <gazebo reference="rotor_2"/>
+  <gazebo reference="rotor_3"/>
+
+  <!-- Odometría -->
+  <gazebo>
+    <plugin filename="ignition-gazebo-odometry-publisher-system" 
+            name="ignition::gazebo::systems::OdometryPublisher">
+      <dimensions>3</dimensions>
+    </plugin>
+  </gazebo>
+
+  <!-- Plugins de motor para cada rotor -->
+  <xacro:macro name="motor_plugin" params="joint_name link_name turning_dir motor_num">
+    <gazebo>
+      <plugin filename="ignition-gazebo-multicopter-motor-model-system" 
+              name="gz::sim::systems::MulticopterMotorModel">
+        <robotNamespace>drone</robotNamespace>
+        <jointName>${joint_name}</jointName>
+        <linkName>${link_name}</linkName>
+        <turningDirection>${turning_dir}</turningDirection>
+        <timeConstantUp>${time_constant_up}</timeConstantUp>
+        <timeConstantDown>${time_constant_down}</timeConstantDown>
+        <maxRotVelocity>${max_rot_velocity}</maxRotVelocity>
+        <motorConstant>${motor_constant}</motorConstant>
+        <momentConstant>${moment_constant}</momentConstant>
+        <commandSubTopic>/drone/gazebo/command/motor_speed</commandSubTopic>
+        <motorNumber>${motor_num}</motorNumber>
+        <rotorDragCoefficient>${rotor_drag_coefficient}</rotorDragCoefficient>
+        <rollingMomentCoefficient>${rolling_moment_coefficient}</rollingMomentCoefficient>
+        <motorSpeedPubTopic>/drone/gazebo/motor_speed</motorSpeedPubTopic>
+        <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
+        <motorType>velocity</motorType>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+
+  <xacro:call_macro name="motor_plugin" joint_name="rotor_0_joint" link_name="rotor_0" turning_dir="ccw" motor_num="0"/>
+  <xacro:call_macro name="motor_plugin" joint_name="rotor_1_joint" link_name="rotor_1" turning_dir="ccw" motor_num="1"/>
+  <xacro:call_macro name="motor_plugin" joint_name="rotor_2_joint" link_name="rotor_2" turning_dir="cw"  motor_num="2"/>
+  <xacro:call_macro name="motor_plugin" joint_name="rotor_3_joint" link_name="rotor_3" turning_dir="cw"  motor_num="3"/>
+
+  <!-- Control de velocidad (Twist) -->
+  <gazebo>
+    <plugin filename="ignition-gazebo-multicopter-control-system" 
+            name="gz::sim::systems::MulticopterVelocityControl">
+      <robotNamespace>drone</robotNamespace>
+      <commandSubTopic>gazebo/command/twist</commandSubTopic>
+      <enableSubTopic>enable</enableSubTopic>
+      <comLinkName>base_link</comLinkName>
+      <velocityGain>2.7 2.7 2.7</velocityGain>
+      <attitudeGain>2 3 0.15</attitudeGain>
+      <angularRateGain>0.4 0.52 0.18</angularRateGain>
+      <maximumLinearAcceleration>2 2 2</maximumLinearAcceleration>
+      <rotorConfiguration>
+        <rotor><jointName>rotor_0_joint</jointName><forceConstant>${motor_constant}</forceConstant><momentConstant>${moment_constant}</momentConstant><direction>1</direction></rotor>
+        <rotor><jointName>rotor_1_joint</jointName><forceConstant>${motor_constant}</forceConstant><momentConstant>${moment_constant}</momentConstant><direction>1</direction></rotor>
+        <rotor><jointName>rotor_2_joint</jointName><forceConstant>${motor_constant}</forceConstant><momentConstant>${moment_constant}</momentConstant><direction>-1</direction></rotor>
+        <rotor><jointName>rotor_3_joint</jointName><forceConstant>${motor_constant}</forceConstant><momentConstant>${moment_constant}</momentConstant><direction>-1</direction></rotor>
+      </rotorConfiguration>
+    </plugin>
+  </gazebo>
+
+</robot>
